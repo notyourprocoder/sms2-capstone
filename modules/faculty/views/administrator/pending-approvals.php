@@ -68,20 +68,109 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':user_id'       => $userId
                     ]);
 
-                    // 4. Activate faculty profile
-                    $stmt2 = $pdo->prepare("UPDATE faculty_db.faculty_profiles SET profile_status = 'Active' WHERE user_id = :user_id");
+                    // 4. Activate faculty profile - status the Dean/Admin
+                    // sees ("Active") AND the underlying request_status
+                    // ("approved") both need to move together. Only
+                    // updating profile_status left request_status stuck
+                    // on its default 'pending' forever.
+                    $stmt2 = $pdo->prepare("UPDATE faculty_db.faculty_profiles SET profile_status = 'Active', request_status = 'approved' WHERE user_id = :user_id");
                     $stmt2->execute([':user_id' => $userId]);
+
+                    // 5. Ensure a bridging faculty_db.faculty record exists.
+                    //
+                    // Evaluations (and the Peer Evaluation directory, Dean
+                    // summary, etc.) all key off faculty.faculty_id - NEVER
+                    // faculty_profiles.id. A profile with no matching faculty
+                    // row shows up everywhere as "NOT LINKED" and can never
+                    // be evaluated, no matter how "Active"/"approved" it is.
+                    // Approval is the right moment to create that row if it
+                    // doesn't already exist, using the same email/faculty_no
+                    // bridging rule used everywhere else in this app.
+                    //
+                    // Wrapped in its own try/catch, separate from the outer
+                    // one: if this step fails (e.g. an enum value mismatch),
+                    // the account should still be approved/activated rather
+                    // than the whole approval being rolled back over a
+                    // linking problem the Dean/Admin can fix later.
+                    try {
+                        $fullProfileStmt = $pdo->prepare("SELECT * FROM faculty_db.faculty_profiles WHERE user_id = :user_id LIMIT 1");
+                        $fullProfileStmt->execute([':user_id' => $userId]);
+                        $fp = $fullProfileStmt->fetch(PDO::FETCH_ASSOC);
+
+                        if ($fp) {
+                            $emailParam = !empty($fp['email']) ? $fp['email'] : null;
+
+                            $checkFacultyStmt = $pdo->prepare("
+                                SELECT faculty_id FROM faculty_db.faculty
+                                WHERE (:email_check IS NOT NULL AND email = :email_val)
+                                   OR faculty_no = :faculty_no
+                                LIMIT 1
+                            ");
+                            $checkFacultyStmt->execute([
+                                ':email_check' => $emailParam,
+                                ':email_val'   => $emailParam,
+                                ':faculty_no'  => $fp['faculty_id'] ?? '',
+                            ]);
+                            $existingFacultyId = $checkFacultyStmt->fetchColumn();
+
+                            if (!$existingFacultyId) {
+                                $departmentId = null;
+                                if (!empty($fp['designated_department'])) {
+                                    $deptIdStmt = $pdo->prepare("SELECT department_id FROM faculty_db.departments WHERE code = :code LIMIT 1");
+                                    $deptIdStmt->execute([':code' => $fp['designated_department']]);
+                                    $departmentId = $deptIdStmt->fetchColumn() ?: null;
+                                }
+
+                                $insertFacultyStmt = $pdo->prepare("
+                                    INSERT INTO faculty_db.faculty (
+                                        faculty_no, external_user_id, first_name, middle_name, last_name, suffix,
+                                        birthdate, sex, phone, email, department_id, position,
+                                        academic_rank, employment_status, profile_status, overall_rating,
+                                        hired_date, contractual_end_date, created_at, updated_at
+                                    ) VALUES (
+                                        :faculty_no, :external_user_id, :first_name, :middle_name, :last_name, :suffix,
+                                        :birthdate, :sex, :phone, :email, :department_id, :position,
+                                        'instructor', :employment_status, 'Active', 0.00,
+                                        :hired_date, :contractual_end_date, NOW(), NOW()
+                                    )
+                                ");
+                                $insertFacultyStmt->execute([
+                                    ':faculty_no'           => $fp['faculty_id'] ?? null,
+                                    ':external_user_id'     => (string) $userId,
+                                    ':first_name'           => $fp['first_name'] ?? '',
+                                    ':middle_name'          => $fp['middle_name'] ?? null,
+                                    ':last_name'            => $fp['last_name'] ?? '',
+                                    ':suffix'               => $fp['suffix'] ?? null,
+                                    ':birthdate'            => !empty($fp['birthdate']) ? $fp['birthdate'] : null,
+                                    ':sex'                  => !empty($fp['sex']) ? strtolower($fp['sex']) : null,
+                                    ':phone'                => $fp['phone'] ?? null,
+                                    ':email'                => $fp['email'] ?? null,
+                                    ':department_id'        => $departmentId,
+                                    ':position'             => $fp['position'] ?? null,
+                                    ':employment_status'    => $fp['employment_status'] ?: 'Probationary',
+                                    ':hired_date'           => !empty($fp['hired_date']) ? $fp['hired_date'] : null,
+                                    ':contractual_end_date' => !empty($fp['contractual_end']) ? $fp['contractual_end'] : (!empty($fp['contractual_end_date']) ? $fp['contractual_end_date'] : null),
+                                ]);
+                            }
+                        }
+                    } catch (Throwable $linkError) {
+                        // Don't let a linking hiccup block the approval itself.
+                        error_log('Auto-link faculty record on approval failed for user_id=' . $userId . ': ' . $linkError->getMessage());
+                    }
 
                     $pdo->commit();
                     $message = "Account successfully approved! Default password set to: " . htmlspecialchars($defaultPassword);
                     $messageType = "success";
 
                 } elseif ($action === 'reject') {
-                    // Reject account and update profile status
+                    // Reject account and update profile status - same fix
+                    // as approve: request_status must move to 'rejected'
+                    // alongside profile_status, or it's left stuck on
+                    // 'pending' even though the account itself is rejected.
                     $stmt1 = $pdo->prepare("UPDATE sms2_db.users SET status = 'rejected' WHERE id = :user_id");
                     $stmt1->execute([':user_id' => $userId]);
 
-                    $stmt2 = $pdo->prepare("UPDATE faculty_db.faculty_profiles SET profile_status = 'Rejected' WHERE user_id = :user_id");
+                    $stmt2 = $pdo->prepare("UPDATE faculty_db.faculty_profiles SET profile_status = 'Rejected', request_status = 'rejected' WHERE user_id = :user_id");
                     $stmt2->execute([':user_id' => $userId]);
 
                     $pdo->commit();
