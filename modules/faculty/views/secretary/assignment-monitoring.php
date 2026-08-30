@@ -23,9 +23,47 @@ $assignmentSummary = [];
 $facultyConflicts = [];
 $roomConflicts = [];
 $allConflicts = [];
-$dbTableStatus = 'Checking database...';
+$dbTableStatus = 'Waiting for schedule data integration (REST API)';
 $dbMatchingTables = [];
 
+/* ============================================================
+ * TODO: SCHEDULE DATA INTEGRATION (REST API)
+ * ------------------------------------------------------------
+ * Schedule/assignment data lives in a different module. The block
+ * below queried faculty_class_assignments directly from this DB,
+ * which is no longer the plan - replace it with a REST API call
+ * to that module instead. Expected shape for $assignmentCards
+ * (one row per class assignment) so the rest of this page (unit
+ * summary table, chart, conflict detection, conflict modal) keeps
+ * working unchanged once real data is wired in:
+ *
+ *   [
+ *     'id'         => int,
+ *     'faculty_id' => int,
+ *     'class_id'   => int,
+ *     'units'      => int,
+ *     'room'       => string,
+ *     'time'       => string,   // e.g. "8:00 AM - 9:30 AM"
+ *     'days'       => string,   // e.g. "MWF"
+ *     'status'     => string,
+ *     'first_name' => string,
+ *     'last_name'  => string,
+ *   ]
+ *
+ * Example of what this will likely look like once the endpoint exists:
+ *
+ *   $response = fetch_from_scheduling_api(BASE_URL . '/api/schedules/assignments');
+ *   if ($response['success']) {
+ *       $assignmentCards = $response['data'];
+ *   }
+ *
+ * Everything below this comment (conflict detection, summary table,
+ * chart) already operates purely on the $assignmentCards array, so
+ * no other changes should be needed elsewhere on this page once
+ * $assignmentCards is populated from the real API response.
+ * ============================================================ */
+
+/*
 try {
     $pdo = facultyDb();
 
@@ -63,82 +101,6 @@ try {
             ");
             $assignmentSummary = $summaryStmt ? $summaryStmt->fetchAll(PDO::FETCH_ASSOC) : [];
 
-            // Detect schedule conflicts (Faculty & Room conflicts)
-            if (!empty($assignmentCards)) {
-                // Build time slot index: faculty_id => [time_slot_key] => [assignments]
-                $facultyTimeIndex = [];
-                $roomTimeIndex = [];
-
-                foreach ($assignmentCards as $assignment) {
-                    $fid = (int) ($assignment['faculty_id'] ?? 0);
-                    $rid = htmlspecialchars((string) ($assignment['room'] ?? 'Unknown'), ENT_QUOTES, 'UTF-8');
-                    $time = htmlspecialchars((string) ($assignment['time'] ?? ''), ENT_QUOTES, 'UTF-8');
-                    $days = htmlspecialchars((string) ($assignment['days'] ?? ''), ENT_QUOTES, 'UTF-8');
-                    $classId = (int) ($assignment['class_id'] ?? 0);
-
-                    // Create a time slot key (faculty)
-                    if ($fid > 0 && !empty($time) && !empty($days)) {
-                        $timeSlotKey = $time . '|' . $days;
-                        if (!isset($facultyTimeIndex[$fid])) {
-                            $facultyTimeIndex[$fid] = [];
-                        }
-                        if (!isset($facultyTimeIndex[$fid][$timeSlotKey])) {
-                            $facultyTimeIndex[$fid][$timeSlotKey] = [];
-                        }
-                        $facultyTimeIndex[$fid][$timeSlotKey][] = $assignment;
-                    }
-
-                    // Create a time slot key (room)
-                    if (!empty($rid) && $rid !== 'Unknown' && !empty($time) && !empty($days)) {
-                        $timeSlotKey = $time . '|' . $days;
-                        if (!isset($roomTimeIndex[$rid])) {
-                            $roomTimeIndex[$rid] = [];
-                        }
-                        if (!isset($roomTimeIndex[$rid][$timeSlotKey])) {
-                            $roomTimeIndex[$rid][$timeSlotKey] = [];
-                        }
-                        $roomTimeIndex[$rid][$timeSlotKey][] = $assignment;
-                    }
-                }
-
-                // Find faculty conflicts (same faculty, same time slot, multiple classes)
-                foreach ($facultyTimeIndex as $fid => $slots) {
-                    foreach ($slots as $timeSlotKey => $assignments) {
-                        if (count($assignments) > 1) {
-                            foreach ($assignments as $assignment) {
-                                $facultyConflicts[] = [
-                                    'type' => 'Faculty Schedule Conflict',
-                                    'faculty_id' => $fid,
-                                    'faculty_name' => trim((string) ($assignment['first_name'] ?? '') . ' ' . (string) ($assignment['last_name'] ?? '')) ?: 'Unknown',
-                                    'time_slot' => $timeSlotKey,
-                                    'classes' => array_map(function ($a) { return (int) ($a['class_id'] ?? 0); }, $assignments),
-                                    'severity' => 'high'
-                                ];
-                            }
-                        }
-                    }
-                }
-
-                // Find room conflicts (same room, same time slot, multiple classes)
-                foreach ($roomTimeIndex as $rid => $slots) {
-                    foreach ($slots as $timeSlotKey => $assignments) {
-                        if (count($assignments) > 1) {
-                            foreach ($assignments as $assignment) {
-                                $roomConflicts[] = [
-                                    'type' => 'Room Schedule Conflict',
-                                    'room' => $rid,
-                                    'time_slot' => $timeSlotKey,
-                                    'classes' => array_map(function ($a) { return (int) ($a['class_id'] ?? 0); }, $assignments),
-                                    'severity' => 'high'
-                                ];
-                            }
-                        }
-                    }
-                }
-            }
-
-            $allConflicts = array_merge($facultyConflicts, $roomConflicts);
-
             $dbTableStatus = 'Connected to database: ' . DB_NAME;
         } else {
             $dbTableStatus = 'faculty_class_assignments not found in ' . DB_NAME;
@@ -147,6 +109,90 @@ try {
 } catch (Throwable $e) {
     error_log('[assignment-monitoring] ' . $e->getMessage());
     $dbTableStatus = 'Database connection error: ' . $e->getMessage();
+}
+*/
+
+// Conflict detection - already works purely off $assignmentCards, so it
+// stays active and will "just work" the moment the REST API above is wired
+// in and starts populating $assignmentCards with real rows.
+try {
+    // Detect schedule conflicts (Faculty & Room conflicts)
+    if (!empty($assignmentCards)) {
+        // Build time slot index: faculty_id => [time_slot_key] => [assignments]
+        $facultyTimeIndex = [];
+        $roomTimeIndex = [];
+
+        foreach ($assignmentCards as $assignment) {
+            $fid = (int) ($assignment['faculty_id'] ?? 0);
+            $rid = htmlspecialchars((string) ($assignment['room'] ?? 'Unknown'), ENT_QUOTES, 'UTF-8');
+            $time = htmlspecialchars((string) ($assignment['time'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $days = htmlspecialchars((string) ($assignment['days'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $classId = (int) ($assignment['class_id'] ?? 0);
+
+            // Create a time slot key (faculty)
+            if ($fid > 0 && !empty($time) && !empty($days)) {
+                $timeSlotKey = $time . '|' . $days;
+                if (!isset($facultyTimeIndex[$fid])) {
+                    $facultyTimeIndex[$fid] = [];
+                }
+                if (!isset($facultyTimeIndex[$fid][$timeSlotKey])) {
+                    $facultyTimeIndex[$fid][$timeSlotKey] = [];
+                }
+                $facultyTimeIndex[$fid][$timeSlotKey][] = $assignment;
+            }
+
+            // Create a time slot key (room)
+            if (!empty($rid) && $rid !== 'Unknown' && !empty($time) && !empty($days)) {
+                $timeSlotKey = $time . '|' . $days;
+                if (!isset($roomTimeIndex[$rid])) {
+                    $roomTimeIndex[$rid] = [];
+                }
+                if (!isset($roomTimeIndex[$rid][$timeSlotKey])) {
+                    $roomTimeIndex[$rid][$timeSlotKey] = [];
+                }
+                $roomTimeIndex[$rid][$timeSlotKey][] = $assignment;
+            }
+        }
+
+        // Find faculty conflicts (same faculty, same time slot, multiple classes)
+        foreach ($facultyTimeIndex as $fid => $slots) {
+            foreach ($slots as $timeSlotKey => $assignments) {
+                if (count($assignments) > 1) {
+                    foreach ($assignments as $assignment) {
+                        $facultyConflicts[] = [
+                            'type' => 'Faculty Schedule Conflict',
+                            'faculty_id' => $fid,
+                            'faculty_name' => trim((string) ($assignment['first_name'] ?? '') . ' ' . (string) ($assignment['last_name'] ?? '')) ?: 'Unknown',
+                            'time_slot' => $timeSlotKey,
+                            'classes' => array_map(function ($a) { return (int) ($a['class_id'] ?? 0); }, $assignments),
+                            'severity' => 'high'
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Find room conflicts (same room, same time slot, multiple classes)
+        foreach ($roomTimeIndex as $rid => $slots) {
+            foreach ($slots as $timeSlotKey => $assignments) {
+                if (count($assignments) > 1) {
+                    foreach ($assignments as $assignment) {
+                        $roomConflicts[] = [
+                            'type' => 'Room Schedule Conflict',
+                            'room' => $rid,
+                            'time_slot' => $timeSlotKey,
+                            'classes' => array_map(function ($a) { return (int) ($a['class_id'] ?? 0); }, $assignments),
+                            'severity' => 'high'
+                        ];
+                    }
+                }
+            }
+        }
+    }
+
+    $allConflicts = array_merge($facultyConflicts, $roomConflicts);
+} catch (Throwable $e) {
+    error_log('[assignment-monitoring] conflict detection error: ' . $e->getMessage());
 }
 
 require_once __DIR__ . '/../../../../includes/breadcrumbs.php';
@@ -164,15 +210,21 @@ require_once __DIR__ . '/../../../../includes/layout-start.php';
         </h2>
         <p class="text-muted small mb-0">All faculty schedule assignments from the database</p>
     </div>
-    <button class="btn btn-outline-warning" type="button" data-bs-toggle="modal" data-bs-target="#conflictModal">
-        <i class="fas fa-exclamation-triangle me-2"></i>
-        <span class="fw-bold">Conflicts</span>
-        <?php if (!empty($allConflicts)): ?>
-            <span class="badge bg-danger-subtle text-danger ms-2"><?= count($allConflicts) ?></span>
-        <?php else: ?>
-            <span class="badge bg-success-subtle text-success ms-2">✓</span>
-        <?php endif; ?>
-    </button>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary" type="button" id="orToolsResolveBtn" <?= empty($allConflicts) ? 'disabled' : '' ?>>
+            <i class="fas fa-robot me-2"></i>
+            <span class="fw-bold">Resolve with OR-Tools</span>
+        </button>
+        <button class="btn btn-outline-warning" type="button" data-bs-toggle="modal" data-bs-target="#conflictModal">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <span class="fw-bold">Conflicts</span>
+            <?php if (!empty($allConflicts)): ?>
+                <span class="badge bg-danger-subtle text-danger ms-2"><?= count($allConflicts) ?></span>
+            <?php else: ?>
+                <span class="badge bg-success-subtle text-success ms-2">✓</span>
+            <?php endif; ?>
+        </button>
+    </div>
 </div>
 
 <?php if (!empty($dbMatchingTables)): ?>
@@ -503,6 +555,55 @@ require_once __DIR__ . '/../../../../includes/layout-start.php';
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    /* ============================================================
+     * TODO: OR-TOOLS CONFLICT RESOLUTION (REST API)
+     * ------------------------------------------------------------
+     * This button is meant to call a Google OR-Tools-based
+     * scheduling service (likely the Python service in
+     * modules/faculty/python) to automatically resolve the
+     * detected conflicts. Uncomment and fill in the real endpoint
+     * once that service/REST API is ready.
+     * ============================================================ */
+    const orToolsBtn = document.getElementById('orToolsResolveBtn');
+    if (orToolsBtn) {
+        orToolsBtn.addEventListener('click', function () {
+            /*
+            orToolsBtn.disabled = true;
+            const originalHtml = orToolsBtn.innerHTML;
+            orToolsBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Resolving...';
+
+            fetch('<?= BASE_URL ?>/api/scheduling/or-tools-resolve.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    conflicts: <?= json_encode($allConflicts, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('OR-Tools found a resolved schedule. Review the suggested changes.');
+                    // TODO: render data.resolved_assignments / data.suggestions somewhere
+                    location.reload();
+                } else {
+                    alert('OR-Tools could not resolve: ' + (data.message || 'Unknown error'));
+                    orToolsBtn.disabled = false;
+                    orToolsBtn.innerHTML = originalHtml;
+                }
+            })
+            .catch(error => {
+                console.error('OR-Tools resolve error:', error);
+                alert('Error contacting the OR-Tools service.');
+                orToolsBtn.disabled = false;
+                orToolsBtn.innerHTML = originalHtml;
+            });
+            */
+
+            // Placeholder until the REST API above is wired in.
+            alert('OR-Tools integration is not connected yet.');
+        });
+    }
+
     // Handle Confirm buttons
     document.querySelectorAll('.confirm-btn').forEach(btn => {
         btn.addEventListener('click', function() {

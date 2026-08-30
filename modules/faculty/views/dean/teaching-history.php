@@ -4,6 +4,9 @@
  * Module: Faculty Management
  */
 require_once __DIR__ . '/../../../../config/config.php';
+require_once __DIR__ . '/../../../../includes/authentication.php';
+requireAuth();
+require_once __DIR__ . '/../../controllers/FacultyController.php';
 
 $pageTitle    = 'Teaching History';
 $activeModule = 'faculty';
@@ -13,17 +16,70 @@ $breadcrumbs  = [
     ['label' => 'Teaching History', 'url' => null],
 ];
 
+// Real faculty list scoped to the logged-in dean's departments
+$facultyController = new FacultyController();
+$deanFacultyList   = $facultyController->getDirectoryList();
+
+// Rotating avatar color palette
+$avatarPalette = [
+    ['bg' => 'bg-primary', 'text' => 'text-white'],
+    ['bg' => 'bg-info',    'text' => 'text-dark'],
+    ['bg' => 'bg-success', 'text' => 'text-white'],
+    ['bg' => 'bg-warning', 'text' => 'text-dark'],
+    ['bg' => 'bg-danger',  'text' => 'text-white'],
+    ['bg' => 'bg-secondary', 'text' => 'text-white'],
+];
+
 require_once __DIR__ . '/../../../../includes/breadcrumbs.php';
 require_once __DIR__ . '/../../../../includes/layout-start.php';
 ?>
 
 <?php renderBreadcrumbs($breadcrumbs); ?>
 
+<style>
+    /* Custom Scrollbar Styles */
+    .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: rgba(255, 255, 255, 0.25);
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background-color: rgba(13, 110, 253, 0.6);
+    }
+
+    /* Light Theme Scrollbar Adjustments */
+    [data-bs-theme="light"] .custom-scrollbar,
+    body:not([data-bs-theme="dark"]) .custom-scrollbar {
+        scrollbar-color: rgba(13, 110, 253, 0.3) transparent;
+    }
+    [data-bs-theme="light"] .custom-scrollbar::-webkit-scrollbar-thumb,
+    body:not([data-bs-theme="dark"]) .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: rgba(13, 110, 253, 0.3);
+    }
+
+    /* Faculty list height boundary to enforce scrolling */
+    .faculty-list-scroll {
+        max-height: 520px;
+        overflow-y: auto;
+    }
+</style>
+
 <div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
     <div>
         <h1><i class="fas fa-chalkboard-teacher text-sms-primary me-2"></i>Teaching History</h1>
     </div>
 </div>
+
 <div class="container-fluid my-4 bg-light text-dark p-3 rounded-3">
     <div class="row g-4">
         
@@ -34,79 +90,62 @@ require_once __DIR__ . '/../../../../includes/layout-start.php';
                     <h5 class="mb-0 fw-bold fs-6 text-dark">Faculty Members</h5>
                     <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">Teaching Logs</span>
                 </div>
-                <div class="card-body p-3 overflow-auto" style="max-height: 650px;">
-                    
-                    <div class="d-flex flex-column gap-2">
-                        
-                        <!-- Faculty Card Item 1 -->
-                        <div class="faculty-item d-flex align-items-center justify-content-between p-2 rounded-3 border border-secondary border-opacity-25 bg-light transition-all">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 42px; height: 42px; font-size: 14px; min-width: 42px;">
-                                    JD
-                                </div>
-                                <div>
-                                    <div class="fw-bold text-dark small">John Doe</div>
-                                    <div class="text-secondary" style="font-size: 11px;">BSIT • Web Dev, Database</div>
-                                </div>
-                            </div>
-                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1" style="font-size: 12px;" 
-                                onclick="loadTeachingHistory('FAC-2026-001', 'John Doe', 'BSIT', 'JD', 'bg-primary text-white', 'Head Faculty', '6 Semesters', '14 Courses', '4.85 / 5.0')">
-                                View
-                            </button>
-                        </div>
-
-                        <!-- Faculty Card Item 2 -->
-                        <div class="faculty-item d-flex align-items-center justify-content-between p-2 rounded-3 border border-secondary border-opacity-25 bg-light transition-all">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="rounded-circle bg-info text-dark d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 42px; height: 42px; font-size: 14px; min-width: 42px;">
-                                    JS
-                                </div>
-                                <div>
-                                    <div class="fw-bold text-dark small">Jane Smith</div>
-                                    <div class="text-secondary" style="font-size: 11px;">BSTM • Tourism, Hospitality</div>
-                                </div>
-                            </div>
-                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1" style="font-size: 12px;" 
-                                onclick="loadTeachingHistory('FAC-2026-002', 'Jane Smith', 'BSTM', 'JS', 'bg-info text-dark', 'Instructor II', '4 Semesters', '9 Courses', '4.72 / 5.0')">
-                                View
-                            </button>
-                        </div>
-
-                        <!-- Faculty Card Item 3 -->
-                        <div class="faculty-item d-flex align-items-center justify-content-between p-2 rounded-3 border border-secondary border-opacity-25 bg-light transition-all">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 42px; height: 42px; font-size: 14px; min-width: 42px;">
-                                    AM
-                                </div>
-                                <div>
-                                    <div class="fw-bold text-dark small">Alan Miller</div>
-                                    <div class="text-secondary" style="font-size: 11px;">BSIT • Networking, Cybersecurity</div>
-                                </div>
-                            </div>
-                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1" style="font-size: 12px;" 
-                                onclick="loadTeachingHistory('FAC-2026-045', 'Alan Miller', 'BSIT', 'AM', 'bg-success text-white', 'Assistant Professor', '8 Semesters', '18 Courses', '4.91 / 5.0')">
-                                View
-                            </button>
-                        </div>
-
-                        <!-- Faculty Card Item 4 -->
-                        <div class="faculty-item d-flex align-items-center justify-content-between p-2 rounded-3 border border-secondary border-opacity-25 bg-light transition-all">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 42px; height: 42px; font-size: 14px; min-width: 42px;">
-                                    CG
-                                </div>
-                                <div>
-                                    <div class="fw-bold text-dark small">Clara Garcia</div>
-                                    <div class="text-secondary" style="font-size: 11px;">BSTM • Events Management</div>
-                                </div>
-                            </div>
-                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1" style="font-size: 12px;" 
-                                onclick="loadTeachingHistory('FAC-2026-088', 'Clara Garcia', 'BSTM', 'CG', 'bg-warning text-dark', 'Instructor I', '2 Semesters', '5 Courses', '4.68 / 5.0')">
-                                View
-                            </button>
-                        </div>
-
+                <div class="px-3 pt-3">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light border-secondary border-opacity-25"><i class="fas fa-search text-secondary"></i></span>
+                        <input type="text" id="facultySearchInput" class="form-control border-secondary border-opacity-25" placeholder="Search by name or department..." oninput="onSearchInput()">
                     </div>
+                </div>
+                <div class="card-body p-3 custom-scrollbar faculty-list-scroll">
+                    
+                    <div class="d-flex flex-column gap-2" id="facultyListContainer">
+                        <?php if (empty($deanFacultyList)): ?>
+                            <div class="text-center text-secondary small py-4">No faculty members found.</div>
+                        <?php endif; ?>
+                        
+                        <?php foreach ($deanFacultyList as $i => $f):
+                            $fullName  = trim(($f['first_name'] ?? '') . ' ' . ($f['last_name'] ?? ''));
+                            $initials  = strtoupper(substr($f['first_name'] ?? '', 0, 1) . substr($f['last_name'] ?? '', 0, 1));
+                            $dept      = (string) ($f['designated_department'] ?? '—');
+                            $spec      = trim((string) ($f['specialization_assignment'] ?? ''));
+                            $title     = (string) ($f['position'] ?? ($f['academic_rank'] ?? ''));
+                            $facultyId = (string) ($f['faculty_id'] ?? '');
+                            $color     = $avatarPalette[$i % count($avatarPalette)];
+                            $avatarClass = $color['bg'] . ' ' . $color['text'];
+                        ?>
+                            <div class="faculty-item d-flex align-items-center justify-content-between p-2 rounded-3 border border-secondary border-opacity-25 bg-light transition-all" 
+                                 data-name="<?= htmlspecialchars(mb_strtolower($fullName), ENT_QUOTES, 'UTF-8') ?>" 
+                                 data-dept="<?= htmlspecialchars(mb_strtolower($dept), ENT_QUOTES, 'UTF-8') ?>">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="rounded-circle <?= $avatarClass ?> d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 42px; height: 42px; font-size: 14px; min-width: 42px;">
+                                        <?= htmlspecialchars($initials, ENT_QUOTES, 'UTF-8') ?>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark small"><?= htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8') ?></div>
+                                        <div class="text-secondary" style="font-size: 11px;">
+                                            <?= htmlspecialchars($dept, ENT_QUOTES, 'UTF-8') ?><?= $spec !== '' ? ' • ' . htmlspecialchars($spec, ENT_QUOTES, 'UTF-8') : '' ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1" style="font-size: 12px;"
+                                    onclick="loadTeachingHistory('<?= htmlspecialchars($facultyId, ENT_QUOTES, 'UTF-8') ?>', '<?= htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8') ?>', '<?= htmlspecialchars($dept, ENT_QUOTES, 'UTF-8') ?>', '<?= htmlspecialchars($initials, ENT_QUOTES, 'UTF-8') ?>', '<?= $avatarClass ?>', '<?= htmlspecialchars($title, ENT_QUOTES, 'UTF-8') ?>')">
+                                    View
+                                </button>
+                            </div>
+                        <?php endforeach; ?>
+                        
+                        <div id="facultyNoResults" class="text-center text-secondary small py-4" style="display: none;">No faculty members match your search.</div>
+                    </div>
+                </div>
+
+                <!-- Pagination Footer -->
+                <div class="card-header bg-white border-top border-secondary border-opacity-25 d-flex justify-content-between align-items-center py-2 px-3" id="paginationControls">
+                    <span class="text-secondary small" style="font-size: 11px;" id="paginationInfo">Showing 0-0 of 0</span>
+                    <nav aria-label="Faculty List Navigation">
+                        <ul class="pagination pagination-sm mb-0" id="paginationList">
+                            <!-- Dynamic Page Buttons -->
+                        </ul>
+                    </nav>
                 </div>
             </div>
         </div>
@@ -119,15 +158,15 @@ require_once __DIR__ . '/../../../../includes/layout-start.php';
                 <div class="card-header bg-white border-bottom border-secondary border-opacity-25 p-3">
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                         <div class="d-flex align-items-center gap-3">
-                            <div id="targetAvatar" class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold fs-5 shadow-sm" style="width: 48px; height: 48px; min-width: 48px;">
-                                JD
+                            <div id="targetAvatar" class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center fw-bold fs-5 shadow-sm" style="width: 48px; height: 48px; min-width: 48px;">
+                                —
                             </div>
                             <div>
-                                <h5 class="mb-0 fw-bold text-dark" id="targetName">John Doe</h5>
+                                <h5 class="mb-0 fw-bold text-dark" id="targetName">Select a faculty member</h5>
                                 <div class="d-flex align-items-center gap-2 mt-1">
-                                    <span class="badge border border-secondary border-opacity-25 text-dark bg-light" id="targetDept">BSIT</span>
-                                    <span class="text-secondary small" id="targetTitle">Head Faculty</span>
-                                    <span class="text-secondary small">• ID: <span id="targetId" class="text-dark fw-semibold">FAC-2026-001</span></span>
+                                    <span class="badge border border-secondary border-opacity-25 text-dark bg-light" id="targetDept">—</span>
+                                    <span class="text-secondary small" id="targetTitle">—</span>
+                                    <span class="text-secondary small">• ID: <span id="targetId" class="text-dark fw-semibold">—</span></span>
                                 </div>
                             </div>
                         </div>
@@ -145,19 +184,19 @@ require_once __DIR__ . '/../../../../includes/layout-start.php';
                         <div class="col-4">
                             <div class="p-3 rounded-3 border border-secondary border-opacity-25 bg-light text-center">
                                 <small class="text-secondary d-block mb-1" style="font-size: 11px;">Total Semesters</small>
-                                <span class="h5 fw-bold mb-0 text-dark" id="statSemesters">6 Semesters</span>
+                                <span class="h5 fw-bold mb-0 text-dark" id="statSemesters">—</span>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="p-3 rounded-3 border border-secondary border-opacity-25 bg-light text-center">
                                 <small class="text-secondary d-block mb-1" style="font-size: 11px;">Subjects Handled</small>
-                                <span class="h5 fw-bold mb-0 text-primary" id="statSubjects">14 Courses</span>
+                                <span class="h5 fw-bold mb-0 text-primary" id="statSubjects">—</span>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="p-3 rounded-3 border border-secondary border-opacity-25 bg-light text-center">
                                 <small class="text-secondary d-block mb-1" style="font-size: 11px;">Avg. Evaluation</small>
-                                <span class="h5 fw-bold mb-0 text-success" id="statEval">4.85 / 5.0</span>
+                                <span class="h5 fw-bold mb-0 text-success" id="statEval">—</span>
                             </div>
                         </div>
                     </div>
@@ -177,7 +216,9 @@ require_once __DIR__ . '/../../../../includes/layout-start.php';
                                 </tr>
                             </thead>
                             <tbody class="border-top-0" id="historyTableBody">
-                                <!-- Dynamic rows loaded via JS -->
+                                <tr>
+                                    <td colspan="5" class="text-center text-secondary py-4">Select a faculty member to view their teaching history.</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -190,74 +231,133 @@ require_once __DIR__ . '/../../../../includes/layout-start.php';
 </div>
 
 <script>
-    // Sample database records for dynamic loading
-    const historyData = {
-        'FAC-2026-001': {
-            semesters: '6 Semesters', subjects: '14 Courses', eval: '4.85 / 5.0',
-            rows: [
-                { term: '2nd Sem, AY 2025-2026', title: 'IT 311 - Web Development II', time: 'MWF 08:00 AM - 11:00 AM', sec: 'BSIT 3-A', units: '3.0', status: 'Ongoing', statusClass: 'text-success border-success bg-success' },
-                { term: '2nd Sem, AY 2025-2026', title: 'IT 221 - Database Management', time: 'TTH 01:00 PM - 04:00 PM', sec: 'BSIT 2-C', units: '3.0', status: 'Ongoing', statusClass: 'text-success border-success bg-success' },
-                { term: '1st Sem, AY 2025-2026', title: 'IT 101 - Introduction to Computing', time: 'MWF 01:00 PM - 04:00 PM', sec: 'BSIT 1-A', units: '3.0', status: 'Completed', statusClass: 'text-muted border-secondary bg-transparent' }
-            ]
-        },
-        'FAC-2026-002': {
-            semesters: '4 Semesters', subjects: '9 Courses', eval: '4.70 / 5.0',
-            rows: [
-                { term: '2nd Sem, AY 2025-2026', title: 'TM 201 - Tourism Principles', time: 'MWF 10:00 AM - 01:00 PM', sec: 'BSTM 2-B', units: '3.0', status: 'Ongoing', statusClass: 'text-success border-success bg-success' },
-                { term: '1st Sem, AY 2025-2026', title: 'TM 102 - Hospitality Operations', time: 'TTH 08:00 AM - 11:00 AM', sec: 'BSTM 1-A', units: '3.0', status: 'Completed', statusClass: 'text-muted border-secondary bg-transparent' }
-            ]
-        },
-        'FAC-2026-045': {
-            semesters: '8 Semesters', subjects: '18 Courses', eval: '4.92 / 5.0',
-            rows: [
-                { term: '2nd Sem, AY 2025-2026', title: 'IT 412 - Information Assurance & Security', time: 'TTH 09:00 AM - 12:00 PM', sec: 'BSIT 4-A', units: '3.0', status: 'Ongoing', statusClass: 'text-success border-success bg-success' },
-                { term: '2nd Sem, AY 2025-2026', title: 'IT 322 - Network Administration', time: 'MWF 01:00 PM - 04:00 PM', sec: 'BSIT 3-B', units: '3.0', status: 'Ongoing', statusClass: 'text-success border-success bg-success' }
-            ]
+    const ITEMS_PER_PAGE = 10;
+    let currentPage = 1;
+    let filteredItems = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initPagination();
+    });
+
+    function getMatchingItems() {
+        const input = document.getElementById('facultySearchInput');
+        const query = input ? input.value.trim().toLowerCase() : '';
+        const allItems = Array.from(document.querySelectorAll('#facultyListContainer .faculty-item'));
+
+        return allItems.filter(item => {
+            const name = (item.getAttribute('data-name') || '').toLowerCase();
+            const dept = (item.getAttribute('data-dept') || '').toLowerCase();
+            return name.includes(query) || dept.includes(query);
+        });
+    }
+
+    function initPagination() {
+        filteredItems = getMatchingItems();
+        currentPage = 1;
+        renderPage();
+    }
+
+    function onSearchInput() {
+        initPagination();
+    }
+
+    function renderPage() {
+        const allItems = document.querySelectorAll('#facultyListContainer .faculty-item');
+        const totalItems = filteredItems.length;
+        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
+
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+
+        allItems.forEach(item => {
+            item.classList.remove('d-flex');
+            item.classList.add('d-none');
+        });
+
+        const currentPageItems = filteredItems.slice(startIndex, endIndex);
+        currentPageItems.forEach(item => {
+            item.classList.remove('d-none');
+            item.classList.add('d-flex');
+        });
+
+        // Toggle No Results Message
+        const noResults = document.getElementById('facultyNoResults');
+        if (noResults) {
+            noResults.style.display = totalItems === 0 ? 'block' : 'none';
         }
-    };
+
+        // Update Pagination Info Text
+        const infoEl = document.getElementById('paginationInfo');
+        if (infoEl) {
+            if (totalItems === 0) {
+                infoEl.innerText = 'Showing 0 of 0';
+            } else {
+                const currentStart = startIndex + 1;
+                const currentEnd = Math.min(endIndex, totalItems);
+                infoEl.innerText = `Showing ${currentStart}-${currentEnd} of ${totalItems}`;
+            }
+        }
+
+        // Build Pagination Buttons
+        const listEl = document.getElementById('paginationList');
+        if (!listEl) return;
+        listEl.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        // Previous Button
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `<a class="page-link py-1 px-2" href="#" onclick="changePage(${currentPage - 1}); return false;">&laquo;</a>`;
+        listEl.appendChild(prevLi);
+
+        // Numeric Page Buttons
+        for (let page = 1; page <= totalPages; page++) {
+            const li = document.createElement('li');
+            li.className = `page-item ${page === currentPage ? 'active' : ''}`;
+            li.innerHTML = `<a class="page-link py-1 px-2" href="#" onclick="changePage(${page}); return false;">${page}</a>`;
+            listEl.appendChild(li);
+        }
+
+        // Next Button
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+        nextLi.innerHTML = `<a class="page-link py-1 px-2" href="#" onclick="changePage(${currentPage + 1}); return false;">&raquo;</a>`;
+        listEl.appendChild(nextLi);
+    }
+
+    function changePage(page) {
+        currentPage = page;
+        renderPage();
+    }
 
     function loadTeachingHistory(id, name, dept, initials, avatarBgClass, title) {
-        // Update header details
         document.getElementById('targetName').innerText = name;
         document.getElementById('targetId').innerText = id;
         document.getElementById('targetDept').innerText = dept;
-        document.getElementById('targetTitle').innerText = title;
-        
+        document.getElementById('targetTitle').innerText = title || '—';
+
         const avatarEl = document.getElementById('targetAvatar');
         avatarEl.innerText = initials;
         avatarEl.className = `rounded-circle ${avatarBgClass} d-flex align-items-center justify-content-center fw-bold fs-5`;
 
-        // Update statistics and table rows
-        const data = historyData[id] || {
-            semesters: '1 Semester', subjects: '2 Courses', eval: '4.50 / 5.0',
-            rows: [{ term: '2nd Sem, AY 2025-2026', title: 'GEN 101 - General Education', time: 'MWF 08:00 AM - 11:00 AM', sec: 'SEC 1-A', units: '3.0', status: 'Ongoing', statusClass: 'text-success border-success bg-success' }]
-        };
+        document.getElementById('statSemesters').innerText = '—';
+        document.getElementById('statSubjects').innerText = '—';
+        document.getElementById('statEval').innerText = '—';
 
-        document.getElementById('statSemesters').innerText = data.semesters;
-        document.getElementById('statSubjects').innerText = data.subjects;
-        document.getElementById('statEval').innerText = data.eval;
-
-        // Render table rows
         const tableBody = document.getElementById('historyTableBody');
-        tableBody.innerHTML = '';
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center text-secondary py-4">No teaching history data available yet.</td>
+            </tr>
+        `;
+    }
 
-        data.rows.forEach(r => {
-            const tr = document.createElement('tr');
-            tr.className = 'border-secondary';
-            tr.innerHTML = `
-                <td class="fw-semibold text-white-50">${r.term}</td>
-                <td>
-                    <div class="fw-bold text-white">${r.title}</div>
-                    <div class="text-muted small">${r.time}</div>
-                </td>
-                <td><span class="badge border border-secondary text-secondary">${r.sec}</span></td>
-                <td>${r.units}</td>
-                <td class="text-end">
-                    <span class="badge border border-opacity-25 ${r.statusClass} bg-opacity-10">${r.status}</span>
-                </td>
-            `;
-            tableBody.appendChild(tr);
-        });
+    function exportHistory() {
+        alert('Export is not connected to a data source yet.');
     }
 </script>
 

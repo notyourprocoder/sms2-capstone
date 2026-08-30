@@ -245,6 +245,83 @@ require_once __DIR__ . '/../../../../includes/layout-start.php';
 
 <link rel="stylesheet" href="<?= BASE_URL ?>/modules/faculty/assets/css/faculty.css">
 
+<style>
+    /* High-Contrast Theme-Adaptive Badge Styles */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 650;
+        border-radius: 6px;
+        line-height: 1;
+        letter-spacing: 0.01em;
+        transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+    }
+
+    /* Pending (Yellow / Warning) */
+    .badge-pending {
+        background-color: rgba(245, 158, 11, 0.15) !important;
+        color: #d97706 !important;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    /* Screened (Green / Success) */
+    .badge-screened {
+        background-color: rgba(16, 185, 129, 0.15) !important;
+        color: #059669 !important;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    /* Returned (Red / Danger) */
+    .badge-returned {
+        background-color: rgba(239, 68, 68, 0.15) !important;
+        color: #dc2626 !important;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    /* Neutral / None (Gray) */
+    .badge-none {
+        background-color: rgba(148, 163, 184, 0.15) !important;
+        color: #64748b !important;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+    }
+
+    /* Dark Mode Overrides */
+    [data-bs-theme="dark"] .badge-pending,
+    [data-theme="dark"] .badge-pending,
+    body.dark-mode .badge-pending {
+        background-color: rgba(245, 158, 11, 0.22) !important;
+        color: #fbbf24 !important;
+        border-color: rgba(251, 191, 36, 0.35);
+    }
+
+    [data-bs-theme="dark"] .badge-screened,
+    [data-theme="dark"] .badge-screened,
+    body.dark-mode .badge-screened {
+        background-color: rgba(16, 185, 129, 0.22) !important;
+        color: #34d399 !important;
+        border-color: rgba(52, 211, 153, 0.35);
+    }
+
+    [data-bs-theme="dark"] .badge-returned,
+    [data-theme="dark"] .badge-returned,
+    body.dark-mode .badge-returned {
+        background-color: rgba(239, 68, 68, 0.22) !important;
+        color: #f87171 !important;
+        border-color: rgba(248, 113, 113, 0.35);
+    }
+
+    [data-bs-theme="dark"] .badge-none,
+    [data-theme="dark"] .badge-none,
+    body.dark-mode .badge-none {
+        background-color: rgba(148, 163, 184, 0.20) !important;
+        color: #94a3b8 !important;
+        border-color: rgba(148, 163, 184, 0.3);
+    }
+</style>
+
 <?php renderBreadcrumbs($breadcrumbs); ?>
 
 <div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
@@ -270,7 +347,7 @@ require_once __DIR__ . '/../../../../includes/layout-start.php';
 <?php endif; ?>
 
 <div class="row g-3 mb-4">
-<!-- Card 1: Pending Review -->
+    <!-- Card 1: Pending Review -->
     <div class="col-12 col-sm-6 col-xl-4">
         <section class="card stat-card warning border shadow-sm position-relative h-100">
             <div class="card-body d-flex align-items-center">
@@ -383,9 +460,9 @@ require_once __DIR__ . '/../../../../includes/layout-start.php';
                         <?php
                             $screeningStatus = $r['screening_status'] ?? 'Pending';
                             $badgeClass = match ($screeningStatus) {
-                                'Screened' => 'bg-success-subtle text-success',
-                                'Returned' => 'bg-danger-subtle text-danger',
-                                default    => 'bg-warning-subtle text-warning',
+                                'Screened' => 'badge-screened',
+                                'Returned' => 'badge-returned',
+                                default    => 'badge-pending',
                             };
                             $hasDocument = trim((string) ($r['documents'] ?? '')) !== '';
                             $documentUrl = $hasDocument ? BASE_URL . '/' . ltrim((string) $r['documents'], '/') : '';
@@ -398,14 +475,14 @@ require_once __DIR__ . '/../../../../includes/layout-start.php';
                             <td>
                                 <?php if ($hasDocument): ?>
                                     <a href="<?= htmlspecialchars($documentUrl, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener"
-                                       class="badge bg-success-subtle text-success text-decoration-none">
-                                        <i class="fas fa-paperclip me-1"></i>View File
+                                       class="status-badge badge-screened text-decoration-none">
+                                        <i class="fas fa-paperclip"></i>View File
                                     </a>
                                 <?php else: ?>
-                                    <span class="badge bg-secondary-subtle text-secondary">None</span>
+                                    <span class="status-badge badge-none">None</span>
                                 <?php endif; ?>
                             </td>
-                            <td><span class="badge <?= $badgeClass ?>"><?= htmlspecialchars($screeningStatus, ENT_QUOTES, 'UTF-8') ?></span></td>
+                            <td><span class="status-badge <?= $badgeClass ?>"><?= htmlspecialchars($screeningStatus, ENT_QUOTES, 'UTF-8') ?></span></td>
                             <td><?= htmlspecialchars($r['created_at'] ?? '', ENT_QUOTES, 'UTF-8') ?></td>
                             <td class="text-end">
                                 <?php if ($screeningStatus === 'Pending'): ?>
@@ -499,7 +576,7 @@ require_once __DIR__ . '/../../../../includes/layout-start.php';
             </div>
             <div class="modal-body">
                 <p class="text-muted small mb-2">Draw your signature below to certify this leave application and forward it to the Department Head.</p>
-                    <div class="border rounded-3 overflow-hidden position-relative" id="sig-pad-wrapper" style="touch-action: none; min-height: 180px;">
+                <div class="border rounded-3 overflow-hidden position-relative" id="sig-pad-wrapper" style="touch-action: none; min-height: 180px;">
                     <canvas id="signature-pad" height="180" style="width: 100%; height: 180px; cursor: crosshair; display: block;"></canvas>
                 </div>
                 <div class="d-flex justify-content-between align-items-center mt-2">
@@ -616,7 +693,6 @@ function isDarkMode() {
     const modalContent = document.querySelector('#signatureModal .modal-content');
     if (modalContent) {
         const bg = window.getComputedStyle(modalContent).backgroundColor;
-        // Parse RGB values to determine if background is dark
         const rgb = bg.match(/\d+/g);
         if (rgb && rgb.length >= 3) {
             const brightness = (parseInt(rgb[0]) * 299 + parseInt(rgb[1]) * 587 + parseInt(rgb[2]) * 114) / 1000;
@@ -737,21 +813,18 @@ document.addEventListener('shown.bs.modal', function (e) {
     }
 });
 
-// Global callback variable for modal confirmation
 let onConfirmCallback = null;
 
 function showConfirmModal(message, onConfirm) {
     document.getElementById('confirmModalBody').textContent = message;
     onConfirmCallback = onConfirm;
     
-    // Hide signature modal temporarily so they don't stack awkwardly
     const sigModal = bootstrap.Modal.getInstance(document.getElementById('signatureModal'));
     if (sigModal) sigModal.hide();
 
     bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmActionModal')).show();
 }
 
-// Attach event handler to the modal confirm button once
 document.addEventListener('DOMContentLoaded', function() {
     const submitBtn = document.getElementById('confirmModalSubmitBtn');
     if (submitBtn) {
@@ -784,13 +857,6 @@ function confirmSignature() {
         document.getElementById('screeningActionForm').submit();
     });
 }
-
-document.addEventListener('shown.bs.modal', function (e) {
-    if (e.target && e.target.id === 'signatureModal') {
-        initSignaturePad();
-        clearSignaturePad();
-    }
-});
 
 function viewSignature(dataUrl) {
     document.getElementById('vs-img').src = dataUrl;

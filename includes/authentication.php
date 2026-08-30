@@ -1291,18 +1291,35 @@ function smsCompleteLoginSession(array $user, string $username = ''): array
     $_SESSION['last_activity']         = time();
     $_SESSION['login_at']              = time();
 
+    // changes
     try {
-        $facultyPdo = facultyDb();
+        $facultyPdo = function_exists('facultyDb') ? facultyDb() : db();
         if ($facultyPdo) {
-            $stmt = $facultyPdo->prepare('SELECT department_id FROM faculty_profiles WHERE user_id = ? LIMIT 1');
+            // Retrieve both designated_department/department strings and department_id
+            $stmt = $facultyPdo->prepare('
+                SELECT department_id, designated_department, department 
+                FROM faculty_db.faculty_profiles 
+                WHERE user_id = ? 
+                LIMIT 1
+            ');
             $stmt->execute([(int) $user['id']]);
-            $deptId = $stmt->fetchColumn();
-            $_SESSION['department_id'] = $deptId ? (int) $deptId : null;
-        } else {
-            $_SESSION['department_id'] = null;
+            $deptData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($deptData) {
+                $resolvedDept = trim((string) ($deptData['designated_department'] ?? $deptData['department'] ?? ''));
+                $_SESSION['department_id']   = !empty($deptData['department_id']) ? (int) $deptData['department_id'] : null;
+                $_SESSION['department_name'] = $resolvedDept !== '' ? $resolvedDept : null;
+                $_SESSION['department']      = $resolvedDept !== '' ? $resolvedDept : null;
+            } else {
+                $_SESSION['department_id']   = null;
+                $_SESSION['department_name'] = null;
+                $_SESSION['department']      = null;
+            }
         }
     } catch (Throwable $e) {
-        $_SESSION['department_id'] = null;
+        $_SESSION['department_id']   = null;
+        $_SESSION['department_name'] = null;
+        $_SESSION['department']      = null;
     }
 
     unset($_SESSION['presence_touched_at']);

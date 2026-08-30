@@ -267,58 +267,60 @@ class FacultyModel {
      * with e.g. only Student + Peer scores still gets a usable overall
      * instead of null until Dept Head evaluations exist too.
      */
-    private function fetchPerformanceRows($deptId) {
-        $this->ensureDb();
+private function fetchPerformanceRows($deptId) {
+    $this->ensureDb();
 
-        $params = [];
-        $sql = "
-            SELECT
-                fp.id,
-                CONCAT(fp.first_name, ' ', fp.last_name) AS full_name,
-                AVG(CASE WHEN e.source_type = 'Student'  THEN e.composite_score END) AS student_score,
-                AVG(CASE WHEN e.source_type = 'Peer'     THEN e.composite_score END) AS peer_score,
-                AVG(CASE WHEN e.source_type = 'DeptHead' THEN e.composite_score END) AS teaching_score
-            FROM faculty_db.faculty_profiles fp
-            LEFT JOIN evaluations e ON e.faculty_id = fp.id
-        ";
+    $params = [];
+    $sql = "
+        SELECT
+            fp.id,
+            fp.faculty_id,
+            CONCAT(fp.first_name, ' ', fp.last_name) AS full_name,
+            AVG(CASE WHEN LOWER(e.source_type) LIKE '%student%' THEN e.composite_score END) AS student_score,
+            AVG(CASE WHEN LOWER(e.source_type) LIKE '%peer%'    THEN e.composite_score END) AS peer_score,
+            AVG(CASE WHEN LOWER(e.source_type) LIKE '%head%' OR LOWER(e.source_type) LIKE '%dept%' THEN e.composite_score END) AS teaching_score
+        FROM faculty_db.faculty_profiles fp
+        LEFT JOIN evaluations e 
+            ON (CAST(e.faculty_id AS CHAR) = CAST(fp.id AS CHAR) OR CAST(e.faculty_id AS CHAR) = CAST(fp.faculty_id AS CHAR))
+    ";
 
-        if (!(empty($deptId) || $deptId === '1' || $deptId === 1)) {
-            $sql .= " WHERE (LOWER(TRIM(fp.designated_department)) = LOWER(TRIM(:dept)) OR fp.designated_department = :dept2) ";
-            $params[':dept']  = $deptId;
-            $params[':dept2'] = $deptId;
-        }
-
-        $sql .= " GROUP BY fp.id, fp.first_name, fp.last_name ORDER BY fp.last_name ASC, fp.first_name ASC ";
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-
-        foreach ($rows as &$row) {
-            $row['student_score']  = $row['student_score']  !== null ? (float) $row['student_score']  : null;
-            $row['peer_score']     = $row['peer_score']     !== null ? (float) $row['peer_score']     : null;
-            $row['teaching_score'] = $row['teaching_score'] !== null ? (float) $row['teaching_score'] : null;
-
-            $weights = [];
-            if ($row['student_score']  !== null) $weights['student_score']  = 0.5;
-            if ($row['peer_score']     !== null) $weights['peer_score']     = 0.3;
-            if ($row['teaching_score'] !== null) $weights['teaching_score'] = 0.2;
-
-            if (empty($weights)) {
-                $row['overall'] = null;
-            } else {
-                $weightSum = array_sum($weights);
-                $overall = 0.0;
-                foreach ($weights as $key => $w) {
-                    $overall += $row[$key] * ($w / $weightSum);
-                }
-                $row['overall'] = round($overall, 2);
-            }
-        }
-        unset($row);
-
-        return $rows;
+    if (!(empty($deptId) || $deptId === '1' || $deptId === 1)) {
+        $sql .= " WHERE (LOWER(TRIM(fp.designated_department)) = LOWER(TRIM(:dept)) OR fp.designated_department = :dept2) ";
+        $params[':dept']  = $deptId;
+        $params[':dept2'] = $deptId;
     }
+
+    $sql .= " GROUP BY fp.id, fp.faculty_id, fp.first_name, fp.last_name ORDER BY fp.last_name ASC, fp.first_name ASC ";
+
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute($params);
+    $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+    foreach ($rows as &$row) {
+        $row['student_score']  = $row['student_score']  !== null ? (float) $row['student_score']  : null;
+        $row['peer_score']     = $row['peer_score']     !== null ? (float) $row['peer_score']     : null;
+        $row['teaching_score'] = $row['teaching_score'] !== null ? (float) $row['teaching_score'] : null;
+
+        $weights = [];
+        if ($row['student_score']  !== null) $weights['student_score']  = 0.5;
+        if ($row['peer_score']     !== null) $weights['peer_score']     = 0.3;
+        if ($row['teaching_score'] !== null) $weights['teaching_score'] = 0.2;
+
+        if (empty($weights)) {
+            $row['overall'] = null;
+        } else {
+            $weightSum = array_sum($weights);
+            $overall = 0.0;
+            foreach ($weights as $key => $w) {
+                $overall += $row[$key] * ($w / $weightSum);
+            }
+            $row['overall'] = round($overall, 2);
+        }
+    }
+    unset($row);
+
+    return $rows;
+}
 
 /**
      * Fetch performance metrics summary for a department

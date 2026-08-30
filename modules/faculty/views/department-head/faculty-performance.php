@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../../../../config/config.php';
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../models/FacultyModel.php';
 require_once __DIR__ . '/../../controllers/FacultyPerformanceController.php';
 
 $pdo = function_exists('facultyDb') ? facultyDb() : null;

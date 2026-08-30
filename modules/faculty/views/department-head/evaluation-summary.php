@@ -393,146 +393,184 @@ require_once __DIR__ . '/../../../../includes/layout-start.php';
     </div>
 </div>
 
-<!-- Department Overview: Coverage + Composite + Attention -->
+<!-- Department Overview Summary Cards -->
 <div class="row g-3 mb-3">
-    <div class="col-6 col-lg-3">
-        <div class="card border shadow-sm h-100">
-            <div class="card-body p-3 d-flex align-items-center gap-3">
-                <div class="p-2 rounded-3 bg-info bg-opacity-10 text-info fs-5 d-flex align-items-center justify-content-center flex-shrink-0">
-                    <i class="fas fa-clipboard-check"></i>
-                </div>
-                <div class="flex-grow-1">
-                    <h6 class="text-muted mb-1 small text-uppercase fw-bold">Fully Evaluated</h6>
-                    <div class="fs-5 fw-bold lh-1"><?= $fullyEvaluatedCount ?> <span class="text-muted fw-normal fs-6">/ <?= $totalFacultyCount ?></span></div>
-                    <small class="text-muted">All 3 sources complete</small>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-6 col-lg-3">
-        <div class="card border shadow-sm h-100">
-            <div class="card-body p-3 d-flex align-items-center gap-3">
-                <div class="p-2 rounded-3 bg-primary bg-opacity-10 text-primary fs-5 d-flex align-items-center justify-content-center flex-shrink-0">
+    <!-- College Overall Avg Card (Primary - Blue) -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <section class="card stat-card primary border shadow-sm position-relative h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="stat-icon me-3 text-primary fs-4">
                     <i class="fas fa-chart-pie"></i>
                 </div>
-                <div class="flex-grow-1">
-                    <h6 class="text-muted mb-1 small text-uppercase fw-bold">Dept. Overall Avg</h6>
+                <div>
+                    <h6 class="text-muted mb-0 small text-uppercase fw-bold">College Overall Avg</h6>
                     <?php if ($evaluatedFacultyCount > 0): ?>
-                        <div class="d-flex align-items-baseline gap-1 lh-1">
-                            <span class="fs-5 fw-bold"><?= number_format($deptOverallAverage, 2) ?></span>
-                            <span class="text-muted small">/ 5.00</span>
-                        </div>
-                        <small class="text-muted"><?= getRatingLabel($deptOverallAverage) ?></small>
+                        <h4 class="mb-0 fw-bold"><?= number_format($deptOverallAverage, 2) ?> <span class="text-muted fs-6 fw-normal">/ 5.00</span></h4>
+                        <small class="text-success fw-semibold" style="font-size: 0.75rem;">
+                            <?= getRatingLabel($deptOverallAverage) ?>
+                        </small>
                     <?php else: ?>
-                        <div class="text-muted small">No data yet</div>
+                        <h4 class="mb-0 fw-bold">--</h4>
+                        <small class="text-muted fw-semibold" style="font-size: 0.75rem;">No data yet</small>
                     <?php endif; ?>
                 </div>
             </div>
-        </div>
+            <a href="#evalSourceTabs" class="position-absolute top-0 end-0 m-3 text-muted border rounded p-1 d-flex align-items-center justify-content-center border-secondary-subtle" style="width: 24px; height: 24px; font-size: 0.7rem;" title="View Breakdown">
+                <i class="fas fa-arrow-up-right-from-square"></i>
+            </a>
+        </section>
     </div>
 
-    <div class="col-6 col-lg-3">
-        <div class="card border shadow-sm h-100">
-            <div class="card-body p-3 d-flex align-items-center gap-3">
-                <div class="p-2 rounded-3 bg-success bg-opacity-10 text-success fs-5 d-flex align-items-center justify-content-center flex-shrink-0">
+    <!-- Top Performer Card (Success - Green) -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <section class="card stat-card success border shadow-sm position-relative h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="stat-icon me-3 text-success fs-4">
                     <i class="fas fa-trophy"></i>
                 </div>
-                <div class="flex-grow-1">
-                    <h6 class="text-muted mb-1 small text-uppercase fw-bold">Top Performer</h6>
+                <div class="text-truncate">
+                    <h6 class="text-muted mb-0 small text-uppercase fw-bold">Top Performer</h6>
                     <?php if ($topPerformer): ?>
-                        <div class="fw-bold text-truncate" style="max-width: 160px;"><?= htmlspecialchars($topPerformer['name']) ?></div>
-                        <small class="text-success fw-semibold"><?= number_format($topPerformerScore, 2) ?> / 5.00</small>
+                        <h4 class="mb-0 fw-bold text-truncate" style="max-width: 170px; font-size: 1.15rem;" title="<?= htmlspecialchars($topPerformer['name']) ?>"><?= htmlspecialchars($topPerformer['name']) ?></h4>
+                        <small class="text-success fw-semibold" style="font-size: 0.75rem;">
+                            <i class="fas fa-star me-1"></i><?= number_format($topPerformerScore, 2) ?> / 5.00
+                        </small>
                     <?php else: ?>
-                        <div class="text-muted small">No data yet</div>
+                        <h4 class="mb-0 fw-bold">--</h4>
+                        <small class="text-muted fw-semibold" style="font-size: 0.75rem;">No data yet</small>
                     <?php endif; ?>
                 </div>
             </div>
-        </div>
+            <?php if ($topPerformer && isset($topPerformer['id'])): ?>
+                <a href="javascript:void(0)" onclick="selectFaculty('<?= htmlspecialchars($topPerformer['id'], ENT_QUOTES) ?>')" class="position-absolute top-0 end-0 m-3 text-muted border rounded p-1 d-flex align-items-center justify-content-center border-secondary-subtle" style="width: 24px; height: 24px; font-size: 0.7rem;" title="View Top Performer">
+                    <i class="fas fa-arrow-up-right-from-square"></i>
+                </a>
+            <?php endif; ?>
+        </section>
     </div>
 
-    <div class="col-6 col-lg-3">
-        <div class="card border shadow-sm h-100">
-            <div class="card-body p-3 d-flex align-items-center gap-3">
-                <div class="p-2 rounded-3 bg-danger bg-opacity-10 text-danger fs-5 d-flex align-items-center justify-content-center flex-shrink-0">
+    <!-- Needs Attention Card (Danger - Bright Red) -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <section class="card stat-card danger border shadow-sm position-relative overflow-hidden h-100">
+            <div class="position-absolute top-0 start-0 h-100" style="width: 4px; background-color: #ff4d4d; z-index: 1;"></div>
+            <div class="card-body d-flex align-items-center ps-4">
+                <div class="stat-icon me-3 fs-4" style="color: #ff4d4d;">
                     <i class="fas fa-triangle-exclamation"></i>
                 </div>
-                <div class="flex-grow-1">
-                    <h6 class="text-muted mb-1 small text-uppercase fw-bold">Needs Attention</h6>
-                    <div class="fs-5 fw-bold lh-1"><?= $needsAttentionCount ?></div>
-                    <small class="text-muted">Below 3.50 overall</small>
+                <div>
+                    <h6 class="text-muted mb-0 small text-uppercase fw-bold">Needs Attention</h6>
+                    <h4 class="mb-0 fw-bold" style="color: #ff4d4d;"><?= $needsAttentionCount ?></h4>
+                    <small class="fw-semibold" style="color: #ff4d4d; font-size: 0.75rem;">
+                        Below 3.50 overall
+                    </small>
                 </div>
             </div>
-        </div>
+            <a href="#needsAttentionAlert" class="position-absolute top-0 end-0 m-3 text-muted border rounded p-1 d-flex align-items-center justify-content-center border-secondary-subtle" style="width: 24px; height: 24px; font-size: 0.7rem;" title="View List">
+                <i class="fas fa-arrow-up-right-from-square"></i>
+            </a>
+        </section>
+    </div>
+
+    <!-- Fully Evaluated Card (Info - Cyan) -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <section class="card stat-card info border shadow-sm position-relative h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="stat-icon me-3 text-info fs-4">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted mb-0 small text-uppercase fw-bold">Fully Evaluated</h6>
+                    <h4 class="mb-0 fw-bold"><?= $fullyEvaluatedCount ?> <span class="text-muted fs-6 fw-normal">/ <?= $totalFacultyCount ?></span></h4>
+                    <small class="text-muted fw-semibold" style="font-size: 0.75rem;">
+                        All 3 sources complete
+                    </small>
+                </div>
+            </div>
+            <a href="#evalSourceTabs" class="position-absolute top-0 end-0 m-3 text-muted border rounded p-1 d-flex align-items-center justify-content-center border-secondary-subtle" style="width: 24px; height: 24px; font-size: 0.7rem;" title="View Status">
+                <i class="fas fa-arrow-up-right-from-square"></i>
+            </a>
+        </section>
     </div>
 </div>
 
-<!-- Per-Source Comparison -->
+<!-- Per-Source Comparison Cards -->
 <div class="row g-3 mb-3">
+    <!-- Student Avg Card (Info - Cyan) -->
     <div class="col-12 col-md-4">
-        <div class="card border shadow-sm h-100">
-            <div class="card-body p-3 d-flex align-items-center gap-3">
-                <div class="p-2 rounded-3 bg-info bg-opacity-10 text-info fs-5 d-flex align-items-center justify-content-center flex-shrink-0">
+        <section class="card stat-card info border shadow-sm position-relative h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="stat-icon me-3 text-info fs-4">
                     <i class="fas fa-user-graduate"></i>
                 </div>
-                <div class="flex-grow-1">
-                    <h6 class="text-muted mb-1 small text-uppercase fw-bold">Student Avg <span class="fw-normal">(50%)</span></h6>
+                <div>
+                    <h6 class="text-muted mb-0 small text-uppercase fw-bold">Student Avg <span class="fw-normal">(50%)</span></h6>
                     <?php if (!empty($deptStudentScores)): ?>
-                        <div class="d-flex align-items-baseline gap-1 lh-1">
-                            <span class="fs-5 fw-bold"><?= number_format($deptStudentAverage, 2) ?></span>
-                            <span class="text-muted small">/ 5.00</span>
-                        </div>
-                        <small class="text-muted">based on <?= count($deptStudentScores) ?> rated faculty</small>
+                        <h4 class="mb-0 fw-bold"><?= number_format($deptStudentAverage, 2) ?> <span class="text-muted fs-6 fw-normal">/ 5.00</span></h4>
+                        <small class="text-muted fw-semibold" style="font-size: 0.75rem;">
+                            based on <?= count($deptStudentScores) ?> rated faculty
+                        </small>
                     <?php else: ?>
-                        <div class="text-muted small">No ratings yet</div>
+                        <h4 class="mb-0 fw-bold">--</h4>
+                        <small class="text-muted fw-semibold" style="font-size: 0.75rem;">No ratings yet</small>
                     <?php endif; ?>
                 </div>
             </div>
-        </div>
+            <a href="javascript:void(0)" onclick="switchEvalTab('student', document.querySelectorAll('#evalSourceTabs .nav-link')[1])" class="position-absolute top-0 end-0 m-3 text-muted border rounded p-1 d-flex align-items-center justify-content-center border-secondary-subtle" style="width: 24px; height: 24px; font-size: 0.7rem;" title="View Student Tab">
+                <i class="fas fa-arrow-up-right-from-square"></i>
+            </a>
+        </section>
     </div>
 
+    <!-- Peer Avg Card (Warning - Yellow) -->
     <div class="col-12 col-md-4">
-        <div class="card border shadow-sm h-100">
-            <div class="card-body p-3 d-flex align-items-center gap-3">
-                <div class="p-2 rounded-3 bg-warning bg-opacity-10 text-warning fs-5 d-flex align-items-center justify-content-center flex-shrink-0">
+        <section class="card stat-card warning border shadow-sm position-relative h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="stat-icon me-3 text-warning fs-4">
                     <i class="fas fa-user-friends"></i>
                 </div>
-                <div class="flex-grow-1">
-                    <h6 class="text-muted mb-1 small text-uppercase fw-bold">Peer Avg <span class="fw-normal">(30%)</span></h6>
+                <div>
+                    <h6 class="text-muted mb-0 small text-uppercase fw-bold">Peer Avg <span class="fw-normal">(30%)</span></h6>
                     <?php if ($deptPeerRatedCount > 0): ?>
-                        <div class="d-flex align-items-baseline gap-1 lh-1">
-                            <span class="fs-5 fw-bold"><?= number_format($deptPeerAverage, 2) ?></span>
-                            <span class="text-muted small">/ 5.00</span>
-                        </div>
-                        <small class="text-muted">based on <?= $deptPeerRatedCount ?> rated faculty</small>
+                        <h4 class="mb-0 fw-bold"><?= number_format($deptPeerAverage, 2) ?> <span class="text-muted fs-6 fw-normal">/ 5.00</span></h4>
+                        <small class="text-muted fw-semibold" style="font-size: 0.75rem;">
+                            based on <?= $deptPeerRatedCount ?> rated faculty
+                        </small>
                     <?php else: ?>
-                        <div class="text-muted small">No ratings yet</div>
+                        <h4 class="mb-0 fw-bold">--</h4>
+                        <small class="text-muted fw-semibold" style="font-size: 0.75rem;">No ratings yet</small>
                     <?php endif; ?>
                 </div>
             </div>
-        </div>
+            <a href="javascript:void(0)" onclick="switchEvalTab('peer', document.querySelectorAll('#evalSourceTabs .nav-link')[2])" class="position-absolute top-0 end-0 m-3 text-muted border rounded p-1 d-flex align-items-center justify-content-center border-secondary-subtle" style="width: 24px; height: 24px; font-size: 0.7rem;" title="View Peer Tab">
+                <i class="fas fa-arrow-up-right-from-square"></i>
+            </a>
+        </section>
     </div>
 
+    <!-- Dept. Head Avg Card (Primary - Blue) -->
     <div class="col-12 col-md-4">
-        <div class="card border shadow-sm h-100">
-            <div class="card-body p-3 d-flex align-items-center gap-3">
-                <div class="p-2 rounded-3 bg-primary bg-opacity-10 text-primary fs-5 d-flex align-items-center justify-content-center flex-shrink-0">
+        <section class="card stat-card primary border shadow-sm position-relative h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="stat-icon me-3 text-primary fs-4">
                     <i class="fas fa-user-tie"></i>
                 </div>
-                <div class="flex-grow-1">
-                    <h6 class="text-muted mb-1 small text-uppercase fw-bold">Dept. Head Avg <span class="fw-normal">(20%)</span></h6>
+                <div>
+                    <h6 class="text-muted mb-0 small text-uppercase fw-bold">Dept. Head Avg <span class="fw-normal">(20%)</span></h6>
                     <?php if (!empty($deptHeadScores)): ?>
-                        <div class="d-flex align-items-baseline gap-1 lh-1">
-                            <span class="fs-5 fw-bold"><?= number_format($deptHeadAverage, 2) ?></span>
-                            <span class="text-muted small">/ 5.00</span>
-                        </div>
-                        <small class="text-muted">based on <?= count($deptHeadScores) ?> rated faculty</small>
+                        <h4 class="mb-0 fw-bold"><?= number_format($deptHeadAverage, 2) ?> <span class="text-muted fs-6 fw-normal">/ 5.00</span></h4>
+                        <small class="text-muted fw-semibold" style="font-size: 0.75rem;">
+                            based on <?= count($deptHeadScores) ?> rated faculty
+                        </small>
                     <?php else: ?>
-                        <div class="text-muted small">No ratings yet</div>
+                        <h4 class="mb-0 fw-bold">--</h4>
+                        <small class="text-muted fw-semibold" style="font-size: 0.75rem;">No ratings yet</small>
                     <?php endif; ?>
                 </div>
             </div>
-        </div>
+            <a href="javascript:void(0)" onclick="switchEvalTab('head', document.querySelectorAll('#evalSourceTabs .nav-link')[3])" class="position-absolute top-0 end-0 m-3 text-muted border rounded p-1 d-flex align-items-center justify-content-center border-secondary-subtle" style="width: 24px; height: 24px; font-size: 0.7rem;" title="View Dept Head Tab">
+                <i class="fas fa-arrow-up-right-from-square"></i>
+            </a>
+        </section>
     </div>
 </div>
 
